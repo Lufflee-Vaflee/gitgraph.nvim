@@ -455,38 +455,29 @@ function M._gitgraph(raw_commits, opt, sym, fields)
     local highlights = {}
 
     ---@param cell I.Cell
-    ---@param branch_names_str string|nil
     ---@return string
-    local function commit_cell_symb(cell, branch_names_str)
+    local function commit_cell_symb(cell)
       assert(cell.is_commit)
 
       if options.mode == 'debug' then
         return cell.commit.msg
       end
 
-      local is_end_commit = #cell.commit.children == 0
-      local symbol
-
       if #cell.commit.parents > 1 then
         -- merge commit
-        symbol = is_end_commit and GMCME or GMCM
+        return #cell.commit.children == 0 and GMCME or GMCM
       else
         -- regular commit
-        symbol = is_end_commit and GRCME or GRCM
-      end
-
-      -- Add branch names to end commit symbols
-      if is_end_commit and branch_names_str then
-        return symbol .. " " .. branch_names_str
-      else
-        return symbol
+        return #cell.commit.children == 0 and GRCME or GRCM
       end
     end
 
     ---@param row I.Row
-    ---@return string
+    ---@return string, string|nil
     local function row_to_str(row)
       local row_strs = {}
+      local branch_names_str = nil
+      
       for j = 1, #row.cells do
         local cell = row.cells[j]
         if cell.connector then
@@ -494,16 +485,15 @@ function M._gitgraph(raw_commits, opt, sym, fields)
         else
           assert(cell.commit)
           local c = cell.commit
-          -- Format branch names for end commits
-          local branch_names_str = nil
+          -- Store branch names for end commits to return separately
           if #c.children == 0 and #c.branch_names > 0 then
             branch_names_str = ('(%s)'):format(table.concat(c.branch_names, ' | '))
           end
-          cell.symbol = commit_cell_symb(cell, branch_names_str)
+          cell.symbol = commit_cell_symb(cell)
         end
         row_strs[#row_strs + 1] = cell.symbol
       end
-      return table.concat(row_strs)
+      return table.concat(row_strs), branch_names_str
     end
 
     ---@param row I.Row
@@ -621,11 +611,17 @@ function M._gitgraph(raw_commits, opt, sym, fields)
       if options.mode == 'debug' then
         add_to_row(row_to_debg(proper_row))
         add_to_row((' '):rep(padding - #proper_row.cells))
-        add_to_row(row_to_str(proper_row))
+        local graph_str, branch_str = row_to_str(proper_row)
+        add_to_row(graph_str)
       elseif options.mode == 'test' then
         add_to_row(row_to_test(proper_row))
       else
-        add_to_row(row_to_str(proper_row))
+        local graph_str, branch_str = row_to_str(proper_row)
+        add_to_row(graph_str)
+        -- Add branch name right after the graph if this is an end commit
+        if branch_str then
+          add_to_row(branch_str)
+        end
       end
 
       if options.mode ~= 'test' then
@@ -648,20 +644,30 @@ function M._gitgraph(raw_commits, opt, sym, fields)
 
           local tags = #c.tags > 0 and ('(%s)'):format(table.concat(c.tags, ' | ')) or nil
 
-          -- For end commits, we already added branch names to the symbol
           local is_end_commit = #c.children == 0
           local items = {
             ['hash'] = hash,
             ['timestamp'] = timestamp,
             ['author'] = author,
+            ['branch_name'] = is_end_commit and nil or branch_names,
             ['tag'] = tags,
           }
 
           local pad_size = padding - #proper_row.cells
-
+          
+          -- Adjust padding if we've already added branch names
+          local _, branch_str = row_to_str(proper_row)
+          if is_end_commit and branch_str then
+            -- Already added branch name, so reduce padding
+            pad_size = pad_size - #branch_str - 1
+          end
+          
           if is_head then
             pad_size = pad_size - 2
           end
+          
+          -- Ensure padding is not negative
+          pad_size = math.max(pad_size, 1)
           local pad_str = (' '):rep(pad_size)
           add_to_row(pad_str)
           if is_head then
