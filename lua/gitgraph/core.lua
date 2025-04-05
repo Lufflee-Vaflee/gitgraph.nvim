@@ -455,20 +455,31 @@ function M._gitgraph(raw_commits, opt, sym, fields)
     local highlights = {}
 
     ---@param cell I.Cell
+    ---@param branch_names_str string|nil
     ---@return string
-    local function commit_cell_symb(cell)
+    local function commit_cell_symb(cell, branch_names_str)
       assert(cell.is_commit)
 
       if options.mode == 'debug' then
         return cell.commit.msg
       end
 
+      local is_end_commit = #cell.commit.children == 0
+      local symbol
+
       if #cell.commit.parents > 1 then
         -- merge commit
-        return #cell.commit.children == 0 and GMCME or GMCM
+        symbol = is_end_commit and GMCME or GMCM
       else
         -- regular commit
-        return #cell.commit.children == 0 and GRCME or GRCM
+        symbol = is_end_commit and GRCME or GRCM
+      end
+
+      -- Add branch names to end commit symbols
+      if is_end_commit and branch_names_str then
+        return symbol .. " " .. branch_names_str
+      else
+        return symbol
       end
     end
 
@@ -482,7 +493,13 @@ function M._gitgraph(raw_commits, opt, sym, fields)
           cell.symbol = cell.connector -- TODO: connector and symbol should not be duplicating data?
         else
           assert(cell.commit)
-          cell.symbol = commit_cell_symb(cell)
+          local c = cell.commit
+          -- Format branch names for end commits
+          local branch_names_str = nil
+          if #c.children == 0 and #c.branch_names > 0 then
+            branch_names_str = ('(%s)'):format(table.concat(c.branch_names, ' | '))
+          end
+          cell.symbol = commit_cell_symb(cell, branch_names_str)
         end
         row_strs[#row_strs + 1] = cell.symbol
       end
@@ -631,11 +648,12 @@ function M._gitgraph(raw_commits, opt, sym, fields)
 
           local tags = #c.tags > 0 and ('(%s)'):format(table.concat(c.tags, ' | ')) or nil
 
+          -- For end commits, we already added branch names to the symbol
+          local is_end_commit = #c.children == 0
           local items = {
             ['hash'] = hash,
             ['timestamp'] = timestamp,
             ['author'] = author,
-            ['branch_name'] = branch_names,
             ['tag'] = tags,
           }
 
