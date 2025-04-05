@@ -477,7 +477,7 @@ function M._gitgraph(raw_commits, opt, sym, fields)
     local function row_to_str(row)
       local row_strs = {}
       local branch_names_str = nil
-      
+
       for j = 1, #row.cells do
         local cell = row.cells[j]
         if cell.connector then
@@ -606,6 +606,7 @@ function M._gitgraph(raw_commits, opt, sym, fields)
 
       -- TODO: limit this so we do not leave the screen?
       local padding = width + 2
+      local unbound_branch_name = true
 
       -- part 1
       if options.mode == 'debug' then
@@ -620,6 +621,13 @@ function M._gitgraph(raw_commits, opt, sym, fields)
         add_to_row(graph_str)
         -- Add branch name right after the graph if this is an end commit
         if branch_str then
+          print(width)
+          print(#proper_row.cells)
+          print(#branch_str)
+          print(branch_str)
+        end
+        if branch_str and ((#proper_row.cells + #branch_str) < width) then
+          unbound_branch_name = false
           add_to_row(branch_str)
         end
       end
@@ -649,19 +657,19 @@ function M._gitgraph(raw_commits, opt, sym, fields)
             ['hash'] = hash,
             ['timestamp'] = timestamp,
             ['author'] = author,
-            ['branch_name'] = is_end_commit and nil or branch_names,
+            ['branch_name'] = (is_end_commit and unbound_branch_name) and (nil or branch_names),
             ['tag'] = tags,
           }
 
           local pad_size = padding - #proper_row.cells
-          
+
           -- Adjust padding if we've already added branch names
           local _, branch_str = row_to_str(proper_row)
           if is_end_commit and branch_str then
             -- Already added branch name, so reduce padding
             pad_size = pad_size - #branch_str - 1
           end
-          
+
           if is_head then
             pad_size = pad_size - 2
           end
