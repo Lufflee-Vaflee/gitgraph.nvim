@@ -665,7 +665,7 @@ function M._gitgraph(raw_commits, opt, sym, fields)
 
           -- Adjust padding if we've already added branch names
           local _, branch_str = row_to_str(proper_row)
-          if is_end_commit and branch_str then
+          if is_end_commit and branch_str and not unbound_branch_name then
             -- Already added branch name, so reduce padding
             pad_size = pad_size - #branch_str - 1
           end
@@ -673,9 +673,7 @@ function M._gitgraph(raw_commits, opt, sym, fields)
           if is_head then
             pad_size = pad_size - 2
           end
-          
-          -- Ensure padding is not negative
-          pad_size = math.max(pad_size, 1)
+
           local pad_str = (' '):rep(pad_size)
           add_to_row(pad_str)
           if is_head then
