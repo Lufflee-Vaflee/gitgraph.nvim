@@ -628,6 +628,13 @@ function M._gitgraph(raw_commits, opt, sym, fields)
         end
         if branch_str and ((#proper_row.cells + #branch_str) < width) then
           unbound_branch_name = false
+          -- Add highlight for the inline branch name
+          highlights[#highlights + 1] = {
+            hg = ITEM_HGS['branch_name'].name,
+            row = idx,
+            start = offset,
+            stop = offset + #branch_str,
+          }
           add_to_row(branch_str)
         end
       end
@@ -657,7 +664,7 @@ function M._gitgraph(raw_commits, opt, sym, fields)
             ['hash'] = hash,
             ['timestamp'] = timestamp,
             ['author'] = author,
-            ['branch_name'] = (is_end_commit and unbound_branch_name) and (nil or branch_names),
+            ['branch_name'] = (is_end_commit and unbound_branch_name) and branch_names,
             ['tag'] = tags,
           }
 
