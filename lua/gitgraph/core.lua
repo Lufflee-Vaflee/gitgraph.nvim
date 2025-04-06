@@ -632,9 +632,17 @@ function M._gitgraph(raw_commits, opt, sym, fields)
         end
         if branch_str and ((#proper_row.cells + #branch_str) < width) then
           unbound_branch_name = false
-          -- Add highlight for the inline branch name
+          -- Add highlight for the inline branch name using the branch's color
+          local last_commit_column = 0
+          for j = 1, #proper_row.cells do
+            if proper_row.cells[j].is_commit then
+              last_commit_column = j
+            end
+          end
+          local color = math.floor(last_commit_column / 2)
+          local hg = 'GitGraphBranch' .. tostring(color % NUM_BRANCH_COLORS + 1)
           highlights[#highlights + 1] = {
-            hg = ITEM_HGS['branch_name'].name,
+            hg = hg,
             row = idx,
             start = offset,
             stop = offset + #branch_str,
@@ -695,8 +703,22 @@ function M._gitgraph(raw_commits, opt, sym, fields)
           for _, name in ipairs(fields) do
             local value = items[name]
             if value then
+              local hg_name = ITEM_HGS[name].name
+              
+              -- For branch names, use the same branch color
+              if name == 'branch_name' then
+                local last_commit_column = 0
+                for j = 1, #proper_row.cells do
+                  if proper_row.cells[j].is_commit then
+                    last_commit_column = j
+                  end
+                end
+                local color = math.floor(last_commit_column / 2)
+                hg_name = 'GitGraphBranch' .. tostring(color % NUM_BRANCH_COLORS + 1)
+              end
+              
               highlights[#highlights + 1] = {
-                hg = ITEM_HGS[name].name,
+                hg = hg_name,
                 row = idx,
                 start = offset,
                 stop = offset + #value,
