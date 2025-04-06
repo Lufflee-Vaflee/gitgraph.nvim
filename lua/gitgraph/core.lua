@@ -511,8 +511,10 @@ function M._gitgraph(raw_commits, opt, sym, fields)
         local stop = start + width
         offset = offset + width
 
+        local color = math.floor(j / 2);
+
         if cell.commit then
-          local hg = 'GitGraphBranch' .. tostring(j % NUM_BRANCH_COLORS + 1)
+          local hg = 'GitGraphBranch' .. tostring(color % NUM_BRANCH_COLORS + 1)
           row_hls[#row_hls + 1] = { hg = hg, row = row_idx, start = start, stop = stop }
         elseif cell.symbol == GHOR then
           -- take color from first right cell that attaches to this connector
@@ -535,8 +537,10 @@ function M._gitgraph(raw_commits, opt, sym, fields)
               GLRUCL,
             }
 
+            color = math.floor(k / 2)
+
             if rcell.commit and vim.tbl_contains(continuations, rcell.symbol) then
-              local hg = 'GitGraphBranch' .. tostring(k % NUM_BRANCH_COLORS + 1)
+              local hg = 'GitGraphBranch' .. tostring((color-1) % NUM_BRANCH_COLORS + 1)
               row_hls[#row_hls + 1] = { hg = hg, row = row_idx, start = start, stop = stop }
               break
             end
@@ -663,9 +667,9 @@ function M._gitgraph(raw_commits, opt, sym, fields)
           local items = {
             ['hash'] = hash,
             ['timestamp'] = timestamp,
-            ['author'] = author,
             ['branch_name'] = (is_end_commit and unbound_branch_name) and branch_names,
             ['tag'] = tags,
+            ['author'] = author,
           }
 
           local pad_size = padding - #proper_row.cells
